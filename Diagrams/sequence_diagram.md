@@ -1,6 +1,5 @@
-# NFC touch & go sequence
+# Sequence
 This is the general sequence of the NFC touch & go project. The Neon sensor data retrieval will happen asynchronously.    
-
 ```mermaid
 sequenceDiagram
     actor user as User
@@ -19,19 +18,32 @@ sequenceDiagram
     nfcneon->>nfcdm: Transfer NDEF message.
     nfcdm->>decrypterdm: Parse NDEF message.
     decrypterdm->>loradm:Build connection request.
-    loradm->>loragateway: Send connection request over LoRa.
-    loragateway->>backendthingsboard: Send connection request over MQTT
-    backendthingsboard->>backendthingsboard: Check if Neon exists
+    loradm->>loragateway: Send connection request over LoraWAN.
+    loragateway->>backendthingsboard: Send connection request over MQTT.
+    backendthingsboard->>backendthingsboard: Check if Neon exists.
+    alt Neon known
+        backendthingsboard->>loragateway: Send success message over MQTT.
+        loragateway->>loradm: Send success message over LoraWAN.
+        opt send last known data
+            backendthingsboard->>loragateway: Send last known data over MQTT.
+            loragateway->>loradm: Send last known data over LoraWAN.
+        end
+    else Neon unknown
+        backendthingsboard->>loragateway: Send failure message over MQTT.
+        loragateway->>loradm: Send failure message over LoraWAN.
+    end
 
-    sensorneon->>loraneon: Read sensor data.
-    loraneon->>loragateway: Send sensor data over LoRa.
-    loragateway->> backendthingsboard: Send sensor data over MQTT.
+    loop Every hour
+        sensorneon->>loraneon: Read sensor data.
+        loraneon->>loragateway: Send sensor data over LoraWAN.
+        loragateway->> backendthingsboard: Send sensor data over MQTT.
 
-    backendthingsboard->>loragateway: Send last known data over MQTT.
-    loragateway->>loradm: Send last known data over LoRa.
-    loradm->>decrypterdm: Parse last known data.
-    decrypterdm->>decrypterdm: Decrypt data.
-    decrypterdm->>decrypterdm: Check datatype.
-    decrypterdm->>decrypterdm: Get sensordata.
-    decrypterdm->>displaydm: Display data.
+        backendthingsboard->>loragateway: Send last known data over MQTT.
+        loragateway->>loradm: Send last known data over LoraWAN.
+        loradm->>decrypterdm: Parse last known data.
+        decrypterdm->>decrypterdm: Decrypt data.
+        decrypterdm->>decrypterdm: Check datatype.
+        decrypterdm->>decrypterdm: Get sensordata.
+        decrypterdm->>displaydm: Display data.
+    end
 ```
